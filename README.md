@@ -16,22 +16,15 @@ https://github.com/user-attachments/assets/ea641fb8-00c8-4da8-b0b8-b6e11aac6478
 
 ## 🚀 Installation Guide
 
-This is a VS Code/Cursor extension.
+Install from a marketplace (no cloning required):
 
-1) Clone the repo
+- Cursor Marketplace: search for "Yap: Voice to Text (Local Whisper)" or run `cursor --install-extension local-dev.yap-cursor-extension`.
+- Open VSX: https://open-vsx.org/ (search for `local-dev.yap-cursor-extension`).
+- Visual Studio Code Marketplace: https://marketplace.visualstudio.com/ (search for `Yap: Voice to Text (Local Whisper)`).
 
-```bash
-git clone https://github.com/yourname/yap-cursor-extension.git
-cd yap-cursor-extension
-npm install
-```
+Optional (recommended): Press `Cmd+,` to open Settings and search for "Yap" to customize behavior (see Settings below). You can also edit `settings.json` directly.
 
-2) Run the extension in development
-
-- `npm run watch` (incremental build) and press `F5` in VS Code/Cursor to launch an Extension Development Host; or
-- `npm run compile` and then use Run and Debug → “Extension”.
-
-Note: First run will download model files in the webview and requires WebGPU support.
+Note: First run downloads model files in the webview and requires WebGPU support.
 
 ## 🛠️ How to Use
 
