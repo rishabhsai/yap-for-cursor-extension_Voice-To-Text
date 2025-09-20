@@ -19,7 +19,9 @@
     "huggingface",
     "transformers",
     "local",
-    "ai"
+    "ai",
+    "yapcode",
+    "voice to text"
   ],
   "repository": {
     "type": "git",
