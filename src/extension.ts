@@ -2,14 +2,78 @@ import * as vscode from 'vscode';
 
 type TranscriptAction = 'copy' | 'insertAtCursor' | 'insertBelow' | 'insertAbove' | 'newFile';
 
+/**
+ * Provider for the recorder webview placed in the bottom Panel.
+ * We keep the webview lightweight — it only displays a tiny "Recording…" UI
+ * and owns the microphone + model worker.
+ */
+class YapRecorderViewProvider implements vscode.WebviewViewProvider {
+  public static readonly viewId = 'yap.recorderView';
+  private view: vscode.WebviewView | null = null;
+
+  constructor(
+    private ctx: vscode.ExtensionContext,
+    private onMessage: (msg: any) => void,
+  ) {}
+
+  resolveWebviewView(webviewView: vscode.WebviewView) {
+    this.view = webviewView;
+    webviewView.webview.options = { enableScripts: true };
+    webviewView.webview.html = this.getWebviewHtml(webviewView.webview);
+    webviewView.webview.onDidReceiveMessage((msg) => this.onMessage(msg));
+  }
+
+  get ready(): boolean { return !!this.view; }
+
+  async focus() {
+    await vscode.commands.executeCommand(`${YapRecorderViewProvider.viewId}.focus`);
+  }
+
+  postMessage(msg: any) {
+    this.view?.webview.postMessage(msg);
+  }
+
+  dispose() {
+    this.view = null;
+  }
+
+  private getWebviewHtml(webview: vscode.Webview) {
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.ctx.extensionUri, 'media', 'asr-webview.js'));
+    const nonce = String(Date.now());
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https:; script-src 'nonce-${nonce}' 'unsafe-eval' https://cdn.jsdelivr.net; style-src ${webview.cspSource} 'unsafe-inline'; connect-src https://cdn.jsdelivr.net data:; media-src blob: data:; worker-src blob:;" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Yap Recorder</title>
+      <style>
+        body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: transparent; margin: 0; padding: 12px; }
+        .rec { display: inline-flex; align-items: center; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 5px; background: var(--vscode-charts-red); animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0% { transform: scale(0.8); opacity: .6 } 50% { transform: scale(1.2); opacity: 1 } 100% { transform: scale(0.8); opacity: .6 } }
+        #status { opacity: 0.9 }
+      </style>
+    </head>
+    <body>
+      <div class="rec">
+        <div class="dot"></div>
+        <div id="status">Recording…</div>
+      </div>
+      <script nonce="${nonce}">const vscode = acquireVsCodeApi();</script>
+      <script nonce="${nonce}" src="${scriptUri}"></script>
+    </body>
+    </html>`;
+  }
+}
+
 class YapController {
   private statusItem: vscode.StatusBarItem;
   private recording = false;
-  private webviewPanel: vscode.WebviewPanel | null = null;
   private inlineDecoration: vscode.TextEditorDecorationType | null = null;
   private lastPreviewRange: vscode.Range | null = null;
 
-  constructor(private ctx: vscode.ExtensionContext) {
+  constructor(private ctx: vscode.ExtensionContext, private viewProvider: YapRecorderViewProvider) {
     this.statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 98);
     this.statusItem.command = 'yap.toggle';
     this.updateStatusItem();
@@ -19,7 +83,7 @@ class YapController {
   dispose() {
     this.statusItem.dispose();
     this.inlineDecoration?.dispose();
-    this.webviewPanel?.dispose();
+    this.viewProvider.dispose();
   }
 
   async toggle() {
@@ -119,59 +183,7 @@ class YapController {
     return picked?.action as TranscriptAction | undefined;
   }
 
-  private createOrRevealPanel() {
-    const showPopup = vscode.workspace.getConfiguration('yap').get<boolean>('showPopupWhileRecording', true);
-    if (!showPopup) return null;
-    if (this.webviewPanel) {
-      this.webviewPanel.reveal(undefined, true);
-      return this.webviewPanel;
-    }
-    const panel = vscode.window.createWebviewPanel(
-      'yapRecorder',
-      'Yap Recorder',
-      { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
-      { enableScripts: true, retainContextWhenHidden: true }
-    );
-    panel.iconPath = vscode.Uri.parse('data:image/svg+xml;base64,' + Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>').toString('base64'));
-    panel.webview.html = this.getWebviewHtml(panel.webview);
-    panel.webview.onDidReceiveMessage((msg) => this.onWebviewMessage(msg));
-    panel.onDidDispose(() => {
-      this.webviewPanel = null;
-    });
-    this.webviewPanel = panel;
-    return panel;
-  }
-
-  private getWebviewHtml(webview: vscode.Webview) {
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.ctx.extensionUri, 'media', 'asr-webview.js'));
-    const nonce = String(Date.now());
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https:; script-src 'nonce-${nonce}' 'unsafe-eval' https://cdn.jsdelivr.net; style-src ${webview.cspSource} 'unsafe-inline'; connect-src https://cdn.jsdelivr.net data:; media-src blob: data:; worker-src blob:;" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Yap Recorder</title>
-      <style>
-        body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: transparent; margin: 0; padding: 16px; }
-        .rec { display: inline-flex; align-items: center; gap: 8px; }
-        .dot { width: 10px; height: 10px; border-radius: 5px; background: var(--vscode-charts-red); animation: pulse 1.2s infinite; }
-        @keyframes pulse { 0% { transform: scale(0.8); opacity: .6 } 50% { transform: scale(1.2); opacity: 1 } 100% { transform: scale(0.8); opacity: .6 } }
-        #status { opacity: 0.8 }
-      </style>
-    </head>
-    <body>
-      <div class="rec">
-        <div class="dot"></div>
-        <div id="status">Recording…</div>
-      </div>
-      <script nonce="${nonce}">
-        const vscode = acquireVsCodeApi();
-      </script>
-      <script nonce="${nonce}" src="${scriptUri}"></script>
-    </body>
-    </html>`;
-  }
+  // Webview logic moved into YapRecorderViewProvider (bottom panel)
 
   private onWebviewMessage(msg: any) {
     switch (msg.type) {
@@ -198,19 +210,31 @@ class YapController {
     }
   }
 
+  // Exposed for the view provider callback
+  public onWebviewMessagePublic(msg: any) {
+    this.onWebviewMessage(msg);
+  }
+
   private async start() {
     this.recording = true;
     vscode.commands.executeCommand('setContext', 'yap.recording', true);
     this.updateStatusItem();
-    vscode.window.showInformationMessage('Recording…');
-    const panel = this.createOrRevealPanel();
+    const showPopup = vscode.workspace.getConfiguration('yap').get<boolean>('showPopupWhileRecording', true);
+    if (showPopup) {
+      await this.viewProvider.focus(); // Ensure the panel view is created + visible
+    } else if (!this.viewProvider.ready) {
+      // If user disabled popup, still ensure the webview exists by briefly focusing then hiding panel
+      await this.viewProvider.focus();
+      // Hide the panel again to avoid visual noise
+      await vscode.commands.executeCommand('workbench.action.togglePanel');
+    }
     const language = vscode.workspace.getConfiguration('yap').get<string>('language', 'auto');
-    panel?.webview.postMessage({ type: 'start', language });
+    this.viewProvider.postMessage({ type: 'start', language });
+    vscode.window.setStatusBarMessage('Yap: Recording…', 1500);
   }
 
   private async stop() {
-    const panel = this.webviewPanel;
-    panel?.webview.postMessage({ type: 'stop' });
+    this.viewProvider.postMessage({ type: 'stop' });
   }
 
   private async finishWithText(text: string) {
@@ -219,16 +243,18 @@ class YapController {
     this.updateStatusItem();
     const action = await this.pickAction();
     if (action) this.applyFinalTranscript(action, text);
-    // Close the panel after finishing
-    this.webviewPanel?.dispose();
-    this.webviewPanel = null;
   }
 }
 
 let controller: YapController | null = null;
 
 export function activate(context: vscode.ExtensionContext) {
-  controller = new YapController(context);
+  const provider = new YapRecorderViewProvider(context, (msg) => controller?.onWebviewMessagePublic(msg));
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(YapRecorderViewProvider.viewId, provider)
+  );
+
+  controller = new YapController(context, provider);
 
   context.subscriptions.push(
     vscode.commands.registerCommand('yap.toggle', () => controller?.toggle()),
@@ -241,4 +267,3 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
   controller?.dispose();
 }
-

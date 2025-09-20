@@ -93,9 +93,18 @@
         "yap.showPopupWhileRecording": {
           "type": "boolean",
           "default": true,
-          "description": "Show a small popup/webview that says Recording…"
+          "description": "Show a small bottom panel view while recording."
         }
       }
+    },
+    "views": {
+      "panel": [
+        {
+          "id": "yap.recorderView",
+          "name": "Yap Recorder",
+          "icon": "$(mic)"
+        }
+      ]
     },
     "keybindings": [
       {
