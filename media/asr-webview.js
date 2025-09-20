@@ -121,6 +121,7 @@
   let audioChunks = [];
   let worker = null;
   let language = 'auto';
+  let selectedDeviceId = null;
 
   function ensureWorker() {
     if (worker) return worker;
@@ -147,11 +148,48 @@
     return worker;
   }
 
+  async function refreshMicList() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices.filter(device => device.kind === 'audioinput');
+      const select = document.getElementById('micSelect');
+      if (!select) return;
+      
+      select.innerHTML = '';
+      audioInputs.forEach((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.label || `Microphone ${index + 1}`;
+        select.appendChild(option);
+      });
+      
+      // Select first device if none selected
+      if (!selectedDeviceId && audioInputs.length > 0) {
+        selectedDeviceId = audioInputs[0].deviceId;
+        select.value = selectedDeviceId;
+      }
+    } catch (e) {
+      console.error('Failed to enumerate devices:', e);
+    }
+  }
+
   async function startRecording() {
     audioChunks = [];
     try {
+      // Check if we have microphone permission first
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Microphone access not supported');
+      }
+      
       const constraints = selectedDeviceId ? { audio: { deviceId: { exact: selectedDeviceId } } } : { audio: true };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Verify we actually have audio tracks
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length === 0) {
+        throw new Error('No audio tracks available');
+      }
+      
       const types = [
         'audio/webm;codecs=opus',
         'audio/ogg;codecs=opus',
@@ -162,24 +200,57 @@
       for (const t of types) {
         if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
       }
+      
       mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
+      mediaRecorder.ondataavailable = (e) => { 
+        if (e.data && e.data.size > 0) {
+          audioChunks.push(e.data);
+          console.log('Audio chunk received:', e.data.size, 'bytes');
+        }
+      };
+      
       mediaRecorder.onstop = async () => {
         try {
+          console.log('Recording stopped, processing', audioChunks.length, 'chunks');
+          if (audioChunks.length === 0) {
+            vscode?.postMessage({ type: 'error', message: 'No audio data recorded' });
+            return;
+          }
+          
           const blob = new Blob(audioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
+          console.log('Audio blob created:', blob.size, 'bytes');
           audioChunks = [];
+          
           const f32 = await processAudioBlob(blob, TARGET_SAMPLE_RATE);
-          if (!f32) { vscode?.postMessage({ type: 'error', message: 'No audio recorded' }); return; }
+          if (!f32 || f32.length === 0) { 
+            vscode?.postMessage({ type: 'error', message: 'No audio data after processing' }); 
+            return; 
+          }
+          
+          console.log('Audio processed:', f32.length, 'samples');
           ensureWorker().postMessage({ type: 'generate', data: { audio: f32, language } });
         } catch (e) {
+          console.error('Error processing audio:', e);
           vscode?.postMessage({ type: 'error', message: String(e?.message || e) });
         }
       };
-      mediaRecorder.start();
+      
+      mediaRecorder.start(100); // Record in 100ms chunks
+      console.log('Recording started with device:', selectedDeviceId);
+      
       // populate device labels once permission granted
       refreshMicList();
     } catch (e) {
-      vscode?.postMessage({ type: 'error', message: 'Microphone access failed' });
+      console.error('Microphone access failed:', e);
+      let errorMessage = 'Microphone access failed';
+      if (e.name === 'NotAllowedError') {
+        errorMessage = 'Microphone permission denied. Please allow microphone access and try again.';
+      } else if (e.name === 'NotFoundError') {
+        errorMessage = 'No microphone found. Please check your microphone connection.';
+      } else if (e.name === 'NotReadableError') {
+        errorMessage = 'Microphone is being used by another application.';
+      }
+      vscode?.postMessage({ type: 'error', message: errorMessage });
     }
   }
 
