@@ -1,17 +1,47 @@
 {
   "name": "yap-cursor-extension",
-  "displayName": "Yap: Voice to Text (Local Whisper)",
-  "description": "Status bar + editor title mic to transcribe speech locally (Transformers Whisper). QuickPick on stop: copy/insert/new.",
+  "displayName": "YapCode: Voice to Text (Local Whisper)",
+  "description": "Voice to text in VS Code/Cursor using local Whisper (WebGPU).",
   "version": "0.1.0",
-  "publisher": "local-dev",
+  "publisher": "rishabhsai",
   "engines": {
     "vscode": "^1.86.0"
+  },
+  "icon": "media/icon.png",
+  "keywords": [
+    "voice",
+    "speech",
+    "transcription",
+    "dictation",
+    "microphone",
+    "whisper",
+    "webgpu",
+    "huggingface",
+    "transformers",
+    "local",
+    "ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rishabhsai/yap-for-cursor-extension_Voice-To-Text"
+  },
+  "bugs": {
+    "url": "https://github.com/rishabhsai/yap-for-cursor-extension_Voice-To-Text/issues"
+  },
+  "homepage": "https://github.com/rishabhsai/yap-for-cursor-extension_Voice-To-Text#readme",
+  "license": "MIT",
+  "extensionKind": ["ui"],
+  "capabilities": {
+    "untrustedWorkspaces": { "supported": true },
+    "virtualWorkspaces": { "supported": true }
   },
   "categories": [
     "Other"
   ],
   "activationEvents": [
     "onCommand:yap.toggle",
+    "onCommand:yap.start",
+    "onCommand:yap.stop",
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
