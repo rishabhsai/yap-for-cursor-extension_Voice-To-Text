@@ -18,9 +18,9 @@ https://github.com/user-attachments/assets/ea641fb8-00c8-4da8-b0b8-b6e11aac6478
 
 Install from a marketplace (no cloning required):
 
-- Cursor Marketplace: search for "Yap: Voice to Text (Local Whisper)" or run `cursor --install-extension local-dev.yap-cursor-extension`.
-- Open VSX: https://open-vsx.org/ (search for `local-dev.yap-cursor-extension`).
-- Visual Studio Code Marketplace: https://marketplace.visualstudio.com/ (search for `Yap: Voice to Text (Local Whisper)`).
+- Cursor Marketplace: search for "YapCode: Voice to Text (Local Whisper)" or run `cursor --install-extension rishabhsai.yap-cursor-extension`.
+- Open VSX: https://open-vsx.org/ (search for `rishabhsai.yap-cursor-extension`).
+- Visual Studio Code Marketplace: https://marketplace.visualstudio.com/ (search for "YapCode: Voice to Text (Local Whisper)").
 
 Optional (recommended): Press `Cmd+,` to open Settings and search for "Yap" to customize behavior (see Settings below). You can also edit `settings.json` directly.
 
