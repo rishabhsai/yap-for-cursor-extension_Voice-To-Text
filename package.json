@@ -16,6 +16,15 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "yap-panel",
+          "title": "Yap",
+          "icon": "./media/yap-mic.svg"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "yap.toggle",
@@ -98,11 +107,11 @@
       }
     },
     "views": {
-      "panel": [
+      "yap-panel": [
         {
+          "type": "webview",
           "id": "yap.recorderView",
-          "name": "Yap Recorder",
-          "icon": "$(mic)"
+          "name": "Yap Recorder"
         }
       ]
     },
