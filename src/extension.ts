@@ -63,9 +63,12 @@ class YapRecorderViewProvider implements vscode.WebviewViewProvider {
         <select id="micSelect"></select>
         <button id="stopBtn">Stop</button>
       </div>
-      <div class="rec">
+      <div class="rec" id="recordingStatus" style="display: none;">
         <div class="dot"></div>
         <div id="status">Recording…</div>
+      </div>
+      <div id="idleStatus">
+        <div>Click the mic button in status bar to start recording</div>
       </div>
       <script nonce="${nonce}">const vscode = acquireVsCodeApi();</script>
       <script nonce="${nonce}" src="${scriptUri}"></script>

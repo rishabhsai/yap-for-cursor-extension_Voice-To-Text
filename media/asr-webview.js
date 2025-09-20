@@ -173,8 +173,24 @@
     }
   }
 
+  function showRecordingStatus() {
+    const recordingDiv = document.getElementById('recordingStatus');
+    const idleDiv = document.getElementById('idleStatus');
+    if (recordingDiv) recordingDiv.style.display = 'flex';
+    if (idleDiv) idleDiv.style.display = 'none';
+  }
+
+  function hideRecordingStatus() {
+    const recordingDiv = document.getElementById('recordingStatus');
+    const idleDiv = document.getElementById('idleStatus');
+    if (recordingDiv) recordingDiv.style.display = 'none';
+    if (idleDiv) idleDiv.style.display = 'block';
+  }
+
   async function startRecording() {
     audioChunks = [];
+    showRecordingStatus();
+    
     try {
       // Check if we have microphone permission first
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -250,6 +266,7 @@
       } else if (e.name === 'NotReadableError') {
         errorMessage = 'Microphone is being used by another application.';
       }
+      hideRecordingStatus();
       vscode?.postMessage({ type: 'error', message: errorMessage });
     }
   }
@@ -273,8 +290,7 @@
       startRecording();
     } else if (type === 'stop') {
       stopRecording();
-      const status = document.getElementById('status');
-      if (status) status.textContent = 'Stopping…';
+      hideRecordingStatus();
       // let worker finish and emit partial/final
     }
   });
