@@ -280,13 +280,44 @@
     } catch (e) {}
   }
 
+  // Request microphone permission on load
+  async function requestMicrophonePermission() {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Request permission with minimal constraints
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop the stream immediately - we just wanted permission
+        stream.getTracks().forEach(track => track.stop());
+        console.log('Microphone permission granted');
+        return true;
+      }
+    } catch (e) {
+      console.error('Microphone permission denied or not available:', e);
+      return false;
+    }
+    return false;
+  }
+
+  // Initialize when page loads
+  document.addEventListener('DOMContentLoaded', async () => {
+    bindUIOnce();
+    const hasPermission = await requestMicrophonePermission();
+    if (hasPermission) {
+      await refreshMicList();
+      vscode?.postMessage({ type: 'ready' });
+    } else {
+      const idleDiv = document.getElementById('idleStatus');
+      if (idleDiv) {
+        idleDiv.innerHTML = '<div style="color: var(--vscode-errorForeground);">Microphone permission required. Please allow microphone access in System Settings.</div>';
+      }
+    }
+  });
+
   window.addEventListener('message', async (e) => {
     const { type, language: lang } = e.data || {};
     if (type === 'start') {
       language = lang || 'auto';
       ensureWorker();
-      bindUIOnce();
-      refreshMicList();
       startRecording();
     } else if (type === 'stop') {
       stopRecording();

@@ -95,6 +95,9 @@ class YapRecorderViewProvider {
       </div>
       <div id="idleStatus">
         <div>Click the mic button in status bar to start recording</div>
+        <div style="font-size: 12px; opacity: 0.8; margin-top: 8px;">
+          If microphone doesn't work, check System Settings → Privacy & Security → Microphone
+        </div>
       </div>
       <script nonce="${nonce}">const vscode = acquireVsCodeApi();</script>
       <script nonce="${nonce}" src="${scriptUri}"></script>
