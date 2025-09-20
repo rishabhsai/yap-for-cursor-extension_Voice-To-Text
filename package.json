@@ -119,8 +119,7 @@
       {
         "command": "yap.toggle",
         "key": "cmd+shift+y",
-        "mac": "cmd+shift+y",
-        "when": "editorTextFocus"
+        "mac": "cmd+shift+y"
       }
     ]
   },
