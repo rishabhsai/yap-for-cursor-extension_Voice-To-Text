@@ -48,7 +48,9 @@ class YapRecorderViewProvider implements vscode.WebviewViewProvider {
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Yap Recorder</title>
       <style>
-        body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: transparent; margin: 0; padding: 12px; }
+        body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: transparent; margin: 0; padding: 8px 12px; }
+        .row { display: flex; align-items: center; gap: 10px; }
+        select, button { background: var(--vscode-input-background); color: var(--vscode-foreground); border: 1px solid var(--vscode-input-border); border-radius: 4px; padding: 2px 6px; }
         .rec { display: inline-flex; align-items: center; gap: 8px; }
         .dot { width: 10px; height: 10px; border-radius: 5px; background: var(--vscode-charts-red); animation: pulse 1.2s infinite; }
         @keyframes pulse { 0% { transform: scale(0.8); opacity: .6 } 50% { transform: scale(1.2); opacity: 1 } 100% { transform: scale(0.8); opacity: .6 } }
@@ -56,6 +58,11 @@ class YapRecorderViewProvider implements vscode.WebviewViewProvider {
       </style>
     </head>
     <body>
+      <div class="row" style="margin-bottom:8px">
+        <label for="micSelect">Mic</label>
+        <select id="micSelect"></select>
+        <button id="stopBtn">Stop</button>
+      </div>
       <div class="rec">
         <div class="dot"></div>
         <div id="status">Recording…</div>
@@ -74,7 +81,8 @@ class YapController {
   private lastPreviewRange: vscode.Range | null = null;
 
   constructor(private ctx: vscode.ExtensionContext, private viewProvider: YapRecorderViewProvider) {
-    this.statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 98);
+    // Move Yap control to bottom-right
+    this.statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 98);
     this.statusItem.command = 'yap.toggle';
     this.updateStatusItem();
     this.statusItem.show();
@@ -190,6 +198,12 @@ class YapController {
       case 'loading':
         vscode.window.setStatusBarMessage(`Yap: ${msg.message}`, 1500);
         break;
+      case 'stopRequest':
+        // Stop requested from webview UI
+        if (this.recording) {
+          this.stop();
+        }
+        break;
       case 'ready':
         // Worker ready
         break;
@@ -234,6 +248,13 @@ class YapController {
   }
 
   private async stop() {
+    // Immediately reflect stopping in UI
+    if (this.recording) {
+      this.recording = false;
+      vscode.commands.executeCommand('setContext', 'yap.recording', false);
+      this.updateStatusItem();
+    }
+    vscode.window.setStatusBarMessage('Yap: Stopping…', 1500);
     this.viewProvider.postMessage({ type: 'stop' });
   }
 
