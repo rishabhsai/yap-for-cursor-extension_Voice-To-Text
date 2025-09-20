@@ -1,0 +1,125 @@
+{
+  "name": "yap-cursor-extension",
+  "displayName": "Yap: Voice to Text (Local Whisper)",
+  "description": "Status bar + editor title mic to transcribe speech locally (Transformers Whisper). QuickPick on stop: copy/insert/new.",
+  "version": "0.1.0",
+  "publisher": "local-dev",
+  "engines": {
+    "vscode": "^1.86.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:yap.toggle",
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "yap.toggle",
+        "title": "Yap: Toggle Recording",
+        "category": "Yap"
+      },
+      {
+        "command": "yap.stop",
+        "title": "Yap: Stop Recording",
+        "category": "Yap"
+      },
+      {
+        "command": "yap.start",
+        "title": "Yap: Start Recording",
+        "category": "Yap"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "yap.toggle",
+          "when": "editorTextFocus && !yap.recording",
+          "group": "navigation@98",
+          "icon": "$(mic)"
+        },
+        {
+          "command": "yap.toggle",
+          "when": "editorTextFocus && yap.recording",
+          "group": "navigation@98",
+          "icon": "$(circle-filled)"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "yap.toggle"
+        },
+        {
+          "command": "yap.stop"
+        },
+        {
+          "command": "yap.start"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Yap",
+      "properties": {
+        "yap.alwaysPrompt": {
+          "type": "boolean",
+          "default": true,
+          "description": "Always show action picker on stop (Copy, Insert, New, etc.)."
+        },
+        "yap.defaultAction": {
+          "type": "string",
+          "enum": [
+            "copy",
+            "insertAtCursor",
+            "insertBelow",
+            "insertAbove",
+            "newFile"
+          ],
+          "default": "copy",
+          "description": "Default action when not prompting."
+        },
+        "yap.inlinePreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show live inline preview while transcribing."
+        },
+        "yap.language": {
+          "type": "string",
+          "default": "auto",
+          "description": "Transcription language hint (e.g., 'en', 'es') or 'auto'."
+        },
+        "yap.showPopupWhileRecording": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a small popup/webview that says Recording…"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "yap.toggle",
+        "key": "cmd+shift+y",
+        "mac": "cmd+shift+y",
+        "when": "editorTextFocus"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "@types/vscode": "^1.104.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.9.2"
+  }
+}
